@@ -1,6 +1,7 @@
 package com.alissondev.nexushub.domain.entity;
 
 import com.alissondev.nexushub.domain.enums.StatusBeneficio;
+import com.alissondev.nexushub.exception.BusinessRuleException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -120,6 +121,36 @@ public class BeneficioRede {
 
 	public boolean estaExpirado(LocalDate hoje) {
 		return this.validoAte != null && hoje != null && this.validoAte.isBefore(hoje);
+	}
+
+	public void resgatarCota(LocalDate hoje) {
+		if (this.status != StatusBeneficio.ATIVO) {
+			throw new BusinessRuleException(
+					"O beneficio nao esta disponivel para resgate. Status atual: " + this.status
+			);
+		}
+		if (estaExpirado(hoje)) {
+			throw new BusinessRuleException(
+					"O beneficio encontra-se expirado (valido ate: " + this.validoAte + ")."
+			);
+		}
+		if (cotaDisponivel() <= 0) {
+			throw new BusinessRuleException("O beneficio nao possui cotas disponiveis para resgate.");
+		}
+
+		this.cotaUtilizada = (this.cotaUtilizada != null ? this.cotaUtilizada : 0) + 1;
+		if (this.cotaUtilizada >= this.cotaTotal) {
+			this.status = StatusBeneficio.ESGOTADO;
+		}
+	}
+
+	public void expirar() {
+		if (this.status != StatusBeneficio.ATIVO) {
+			throw new BusinessRuleException(
+					"Apenas beneficios com status ATIVO podem ser expirados. Status atual: " + this.status
+			);
+		}
+		this.status = StatusBeneficio.EXPIRADO;
 	}
 
 	public UUID getId() {
