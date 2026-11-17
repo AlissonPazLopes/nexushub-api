@@ -8,6 +8,7 @@ import com.alissondev.nexushub.domain.enums.StatusOrganizacao;
 import com.alissondev.nexushub.dto.BeneficioRedeRequest;
 import com.alissondev.nexushub.dto.BeneficioRedeResponse;
 import com.alissondev.nexushub.dto.PageResponse;
+import com.alissondev.nexushub.dto.ResgateBeneficioResponse;
 import com.alissondev.nexushub.exception.BusinessRuleException;
 import com.alissondev.nexushub.exception.ResourceNotFoundException;
 import com.alissondev.nexushub.repository.BeneficioRedeRepository;
@@ -18,6 +19,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -103,6 +105,46 @@ public class BeneficioRedeService {
 						"Beneficio da rede nao encontrado para o ID: " + id
 				));
 		return BeneficioRedeResponse.fromEntity(beneficio);
+	}
+
+	@Transactional
+	public ResgateBeneficioResponse resgatar(UUID beneficioId, UUID resgatanteId) {
+		BeneficioRede beneficio = beneficioRepository.findById(beneficioId)
+				.orElseThrow(() -> new ResourceNotFoundException(
+						"Beneficio da rede nao encontrado para o ID: " + beneficioId
+				));
+
+		OrganizacaoParceira resgatante = organizacaoRepository.findById(resgatanteId)
+				.orElseThrow(() -> new ResourceNotFoundException(
+						"Organizacao resgatante nao encontrada para o ID: " + resgatanteId
+				));
+
+		if (resgatante.getStatus() != StatusOrganizacao.ATIVA) {
+			throw new BusinessRuleException(
+					"Apenas organizacoes com status ATIVA podem resgatar beneficios. Status atual: "
+							+ resgatante.getStatus()
+			);
+		}
+
+		if (beneficio.getOrganizacaoOfertante().getId().equals(resgatante.getId())) {
+			throw new BusinessRuleException(
+					"A organizacao ofertante nao pode resgatar o proprio beneficio."
+			);
+		}
+
+		BigDecimal mensalidadeResgatante = resgatante.getPlano().getValorMensalidade();
+		BigDecimal mensalidadeMinima = beneficio.getPlanoMinimo().getValorMensalidade();
+		if (mensalidadeResgatante.compareTo(mensalidadeMinima) < 0) {
+			throw new BusinessRuleException(
+					"O plano da organizacao resgatante (" + resgatante.getPlano().getCodigo()
+							+ ") nao atende ao tier minimo exigido pelo beneficio ("
+							+ beneficio.getPlanoMinimo().getCodigo() + ")."
+			);
+		}
+
+		beneficio.resgatarCota(LocalDate.now());
+		BeneficioRede atualizado = beneficioRepository.saveAndFlush(beneficio);
+		return ResgateBeneficioResponse.fromEntity(atualizado);
 	}
 
 }
