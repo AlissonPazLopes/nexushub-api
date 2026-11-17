@@ -88,7 +88,7 @@ public class GlobalExceptionHandler {
 		ProblemDetail problem = createProblemDetail(
 				HttpStatus.CONFLICT,
 				"Conflito de concorrencia",
-				"O recurso foi atualizado por outra transacao concorrente. Tente novamente.",
+				"O benefício foi alterado por outra requisição. Tente novamente.",
 				request
 		);
 		return toProblemResponse(HttpStatus.CONFLICT, problem);

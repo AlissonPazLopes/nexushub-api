@@ -3,6 +3,8 @@ package com.alissondev.nexushub.controller;
 import com.alissondev.nexushub.dto.BeneficioRedeRequest;
 import com.alissondev.nexushub.dto.BeneficioRedeResponse;
 import com.alissondev.nexushub.dto.PageResponse;
+import com.alissondev.nexushub.dto.ResgateBeneficioRequest;
+import com.alissondev.nexushub.dto.ResgateBeneficioResponse;
 import com.alissondev.nexushub.service.BeneficioRedeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -65,6 +67,15 @@ public class BeneficioRedeController {
 	@Operation(summary = "Consultar beneficio da rede por ID")
 	public ResponseEntity<BeneficioRedeResponse> buscarPorId(@PathVariable UUID id) {
 		return ResponseEntity.ok(beneficioService.buscarPorId(id));
+	}
+
+	@PostMapping("/{id}/resgatar")
+	@Operation(summary = "Resgatar cota de beneficio B2B", description = "Consome 1 unidade de cota com controle de concorrencia otimista (@Version).")
+	public ResponseEntity<ResgateBeneficioResponse> resgatar(
+			@PathVariable UUID id,
+			@Valid @RequestBody ResgateBeneficioRequest request
+	) {
+		return ResponseEntity.ok(beneficioService.resgatar(id, request.organizacaoResgatanteId()));
 	}
 
 }
